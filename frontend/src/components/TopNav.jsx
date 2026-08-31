@@ -24,18 +24,25 @@ import { useAuth } from '../firebase/useAuth';
 export default function TopNav({ onMenuClick }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [unreadCount, setUnreadCount] = useState(3);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 480);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 480px)').matches : false
+  );
   const navRef = useRef(null);
   const navigate = useNavigate();
   const { currentUser } = useAuth();
 
   // Handle window resizing to detect mobile viewport width for bottom sheets
   useEffect(() => {
-    function handleResize() {
-      setIsMobile(window.innerWidth < 480);
+    const mediaQuery = window.matchMedia('(max-width: 480px)');
+    const handleChange = (e) => setIsMobile(e.matches);
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    } else {
+      mediaQuery.addListener(handleChange);
+      return () => mediaQuery.removeListener(handleChange);
     }
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   // Close dropdown on click outside or Escape key
@@ -131,7 +138,7 @@ export default function TopNav({ onMenuClick }) {
         )}
       </AnimatePresence>
 
-      <header className="utility-bar">
+      <header className={`utility-bar ${activeDropdown ? 'dropdown-open' : ''}`}>
         {/* Brand Header — Mobile/Tablet Only */}
         <div className="mobile-logo-container">
           <div style={styles.leafBadge}>
@@ -167,6 +174,17 @@ export default function TopNav({ onMenuClick }) {
                   exit="exit"
                   transition={{ duration: 0.22, ease: 'easeInOut' }}
                 >
+                  {isMobile && (
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '4px',
+                        borderRadius: '2px',
+                        backgroundColor: '#CBD5E1',
+                        margin: '0 auto 12px',
+                      }}
+                    />
+                  )}
                   <div style={styles.dropdownHeader}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={styles.dropdownTitle}>Notifications</span>
@@ -309,6 +327,17 @@ export default function TopNav({ onMenuClick }) {
                   exit="exit"
                   transition={{ duration: 0.22, ease: 'easeInOut' }}
                 >
+                  {isMobile && (
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '4px',
+                        borderRadius: '2px',
+                        backgroundColor: '#CBD5E1',
+                        margin: '0 auto 12px',
+                      }}
+                    />
+                  )}
                   {/* Profile Header Info */}
                   <div style={styles.profileCardHeader}>
                     <div style={styles.profileHeaderAvatar}>
