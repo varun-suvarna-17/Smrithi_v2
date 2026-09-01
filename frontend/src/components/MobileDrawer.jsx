@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Gamepad2, Image, Calendar, ShieldCheck, HelpCircle, X, LogOut, ShieldAlert } from 'lucide-react';
+import { Home, Gamepad2, Image, Calendar, ShieldCheck, HelpCircle, X, LogOut, ShieldAlert, User } from 'lucide-react';
 import { logout } from '../firebase/auth';
 
 export default function MobileDrawer({ isOpen, onClose }) {
@@ -98,6 +98,15 @@ export default function MobileDrawer({ isOpen, onClose }) {
                 >
                   <Calendar size={22} />
                   <span>Daily Care</span>
+                </NavLink>
+
+                <NavLink 
+                  to="/profile" 
+                  onClick={onClose}
+                  style={({ isActive }) => isActive ? { ...styles.navLink, ...styles.navLinkActive } : styles.navLink}
+                >
+                  <User size={22} />
+                  <span>My Profile</span>
                 </NavLink>
               </nav>
 

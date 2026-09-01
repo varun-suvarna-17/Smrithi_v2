@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Gamepad2, Image, Calendar, ShieldCheck, HelpCircle, ShieldAlert, LogOut } from 'lucide-react';
+import { Home, Gamepad2, Image, Calendar, ShieldCheck, HelpCircle, ShieldAlert, LogOut, User } from 'lucide-react';
 import { logout } from '../firebase/auth';
 import { useAuth } from '../firebase/useAuth';
 
@@ -66,6 +66,14 @@ export default function Sidebar() {
           <Calendar size={22} />
           <span>Daily Routine</span>
         </NavLink>
+
+        <NavLink 
+          to="/profile" 
+          style={({ isActive }) => ({ ...styles.navLink, ...(isActive ? styles.navLinkActive : {}) })}
+        >
+          <User size={22} />
+          <span>My Profile</span>
+        </NavLink>
       </nav>
 
       {/* Sidebar Footer Links */}
@@ -86,13 +94,13 @@ export default function Sidebar() {
 
 const styles = {
   sidebar: {
-    width: 'var(--sidebar-width)',
+    width: '100%',
     backgroundColor: 'var(--sidebar-bg)',
-    borderRight: '1px solid var(--border-color)',
     display: 'flex',
     flexDirection: 'column',
     padding: '24px 20px',
     height: '100vh',
+    maxHeight: '100vh',
     position: 'sticky',
     top: 0,
     overflowY: 'auto',

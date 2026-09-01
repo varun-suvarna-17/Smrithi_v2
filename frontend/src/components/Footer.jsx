@@ -49,8 +49,8 @@ const styles = {
   footer: {
     backgroundColor: 'rgba(91, 140, 122, 0.12)',
     borderTop: '1px solid #d2ebd4',
-    padding: '32px 48px',
-    marginTop: '32px',
+    padding: '28px 48px',
+    marginTop: 'auto',
     width: '100%',
   },
   container: {

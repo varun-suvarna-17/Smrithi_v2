@@ -274,7 +274,10 @@ export default function TopNav({ onMenuClick }) {
                   </div>
                   <button
                     className="dropdown-item"
-                    onClick={() => setActiveDropdown(null)}
+                    onClick={() => {
+                      setActiveDropdown(null);
+                      navigate('/profile');
+                    }}
                   >
                     <User size={18} style={{ color: 'var(--primary-green)' }} />
                     <span>Account</span>
@@ -361,7 +364,10 @@ export default function TopNav({ onMenuClick }) {
 
                   <button
                     className="dropdown-item"
-                    onClick={() => setActiveDropdown(null)}
+                    onClick={() => {
+                      setActiveDropdown(null);
+                      navigate('/profile');
+                    }}
                   >
                     <User size={18} style={{ color: 'var(--primary-green)' }} />
                     <span>View Profile</span>

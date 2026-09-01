@@ -19,6 +19,7 @@ import RegionalKitchenGame from './pages/games/RegionalKitchenGame';
 import ActivityHub from './pages/ActivityHub';
 import Memories from './pages/Memories';
 import CaregiverDashboard from './pages/CaregiverDashboard';
+import Profile from './pages/Profile';
 
 export default function App() {
   const location = useLocation();
@@ -54,6 +55,7 @@ export default function App() {
                     <Route path="/activities" element={<PageTransition><ActivityHub /></PageTransition>} />
                     <Route path="/memories" element={<PageTransition><Memories /></PageTransition>} />
                     <Route path="/caregiver" element={<PageTransition><CaregiverDashboard /></PageTransition>} />
+                    <Route path="/profile" element={<PageTransition><Profile /></PageTransition>} />
                   </Routes>
                 </AnimatePresence>
               </Layout>
