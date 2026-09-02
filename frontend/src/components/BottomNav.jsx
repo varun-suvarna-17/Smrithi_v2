@@ -1,21 +1,31 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Calendar, Gamepad2, Image } from 'lucide-react';
+import { Home, Calendar, Gamepad2, Image, LayoutDashboard, User } from 'lucide-react';
+import { useAppModeStore } from '../store/useAppModeStore';
 
 /**
  * BottomNav — mobile ONLY navigation bar.
- * Visibility is controlled by the CSS class bottom-nav-mobile
- * (display:none on desktop, display:flex on mobile).
+ * Dynamically switches navigation items between Patient and Caregiver modes.
  */
 export default function BottomNav() {
   const location = useLocation();
+  const currentMode = useAppModeStore((state) => state.currentMode);
 
-  const navItems = [
-    { label: 'Home',       path: '/home',     icon: Home     },
-    { label: 'Games',      path: '/games',    icon: Gamepad2 },
-    { label: 'Memories',   path: '/memories', icon: Image    },
-    { label: 'Daily Care', path: '/schedule', icon: Calendar },
+  const patientNavItems = [
+    { label: 'Home',       path: '/patient/home',     icon: Home     },
+    { label: 'Games',      path: '/patient/games',    icon: Gamepad2 },
+    { label: 'Memories',   path: '/patient/memories', icon: Image    },
+    { label: 'Daily Care', path: '/patient/schedule', icon: Calendar },
   ];
+
+  const caregiverNavItems = [
+    { label: 'Dashboard',  path: '/caregiver/dashboard', icon: LayoutDashboard },
+    { label: 'Memories',   path: '/caregiver/memories',  icon: Image          },
+    { label: 'Routine',    path: '/caregiver/schedule',  icon: Calendar       },
+    { label: 'Profile',    path: '/caregiver/profile',   icon: User           },
+  ];
+
+  const navItems = currentMode === 'caregiver' ? caregiverNavItems : patientNavItems;
 
   return (
     <nav
@@ -25,15 +35,12 @@ export default function BottomNav() {
     >
       {navItems.map((item) => {
         const Icon = item.icon;
-        const isActive = item.path === '/'
-          ? location.pathname === '/'
-          : location.pathname.startsWith(item.path);
+        const isActive = location.pathname.startsWith(item.path);
 
         return (
           <NavLink
             key={item.path}
             to={item.path}
-            end={item.path === '/'}
             style={isActive ? { ...styles.navLink, ...styles.navLinkActive } : styles.navLink}
             aria-current={isActive ? 'page' : undefined}
           >

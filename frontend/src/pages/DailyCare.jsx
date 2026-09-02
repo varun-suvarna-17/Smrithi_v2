@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { Check, Pill, TreePine, Droplet, Plus, BookOpen } from 'lucide-react';
+import { Check, Pill, TreePine, Droplet, Plus, BookOpen, Clock } from 'lucide-react';
+import { useAppModeStore } from '../store/useAppModeStore';
 
 export default function DailyCare() {
+  const currentMode = useAppModeStore((state) => state.currentMode);
+  const patientProfile = useAppModeStore((state) => state.patientProfile);
   const [medTaken, setMedTaken] = useState(false);
   const [waterCount, setWaterCount] = useState(2); // Starts at 2 of 8
   
@@ -16,17 +19,27 @@ export default function DailyCare() {
   const circumference = 2 * Math.PI * radius;
   const strokeOffset = circumference - (waterCount / 8) * circumference;
 
+  // Dynamic current date formatting
+  const today = new Date();
+  const dateFormatted = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+
   return (
     <div style={styles.container}>
       {/* Page Header */}
       <div style={styles.header}>
         <div>
-          <h1 style={styles.title}>Daily Care</h1>
-          <p style={styles.subtitle}>Your schedule and wellness goals for today.</p>
+          <h1 style={styles.title}>
+            {currentMode === 'caregiver' ? 'Daily Routine Manager' : 'Daily Care'}
+          </h1>
+          <p style={styles.subtitle}>
+            {currentMode === 'caregiver'
+              ? `Schedule and wellness routine for ${patientProfile.name || 'your patient'}.`
+              : 'Your schedule and wellness goals for today.'}
+          </p>
         </div>
         <div style={styles.dateBox}>
           <div style={styles.dateLabel}>Today</div>
-          <div style={styles.dateVal}>October 24</div>
+          <div style={styles.dateVal}>{dateFormatted}</div>
         </div>
       </div>
 
@@ -34,7 +47,30 @@ export default function DailyCare() {
       <div style={styles.layoutGrid} className="daily-care-layout-grid">
         {/* Left Column: Schedule */}
         <div style={styles.scheduleCol}>
-          <h2 style={styles.sectionHeader}>Schedule</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={styles.sectionHeader}>Schedule</h2>
+            {currentMode === 'caregiver' && (
+              <button
+                type="button"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: 'var(--secondary-green)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--primary-green)',
+                  padding: '8px 14px',
+                  borderRadius: '20px',
+                  fontWeight: '700',
+                  fontSize: '0.88rem',
+                  cursor: 'pointer',
+                }}
+                onClick={() => alert(`Add New Routine Item for ${patientProfile.name || 'Patient'}`)}
+              >
+                <Plus size={16} /> Add Routine Item
+              </button>
+            )}
+          </div>
           
           <div style={styles.timelineList}>
             {/* Task 1: Morning Stretch (Completed) */}

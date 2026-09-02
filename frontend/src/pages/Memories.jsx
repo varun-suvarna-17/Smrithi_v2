@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, Users, Home, Award, Compass, X, Image as ImageIcon } from 'lucide-react';
+import { Plus, Users, Home, Award, Compass, X, Image as ImageIcon, Upload } from 'lucide-react';
+import { useAppModeStore } from '../store/useAppModeStore';
 
 export default function Memories() {
+  const currentMode = useAppModeStore((state) => state.currentMode);
   const [albums, setAlbums] = useState([
     {
       id: 'family',
@@ -20,7 +22,7 @@ export default function Memories() {
       id: 'home',
       title: 'My Home',
       count: 12,
-      subText: '12 photos',
+      subText: 'Added 3 days ago',
       icon: Home,
       coverUrl: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&q=80&w=800',
       images: [
@@ -32,7 +34,7 @@ export default function Memories() {
       id: 'happy',
       title: 'Happy Moments',
       count: 38,
-      subText: '38 photos',
+      subText: 'Added last week',
       icon: Award,
       coverUrl: 'https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?auto=format&fit=crop&q=80&w=800',
       images: [
@@ -44,7 +46,7 @@ export default function Memories() {
       id: 'places',
       title: 'Special Places',
       count: 18,
-      subText: '18 photos',
+      subText: 'Added 2 weeks ago',
       icon: Compass,
       coverUrl: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&q=80&w=800',
       images: [
@@ -59,6 +61,20 @@ export default function Memories() {
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState('family');
   const [newDesc, setNewDesc] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleCreateMemory = (e) => {
     e.preventDefault();
@@ -72,13 +88,14 @@ export default function Memories() {
       places: 'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&q=80&w=800',
     };
 
-    const targetUrl = defaultCovers[newCategory] || defaultCovers.family;
+    const targetUrl = imagePreview || defaultCovers[newCategory] || defaultCovers.family;
 
     setAlbums(prev => prev.map(album => {
       if (album.id === newCategory) {
         return {
           ...album,
           count: album.count + 1,
+          subText: 'Added just now',
           coverUrl: targetUrl,
           images: [targetUrl, ...album.images]
         };
@@ -88,8 +105,9 @@ export default function Memories() {
 
     setNewTitle('');
     setNewDesc('');
+    setImageFile(null);
+    setImagePreview(null);
     setShowAddModal(false);
-    alert("New memory added successfully to your album!");
   };
 
   return (
@@ -102,9 +120,11 @@ export default function Memories() {
             A comforting space to look back at special moments, family, and places that bring joy.
           </p>
         </div>
-        <button style={styles.addBtn} onClick={() => setShowAddModal(true)}>
-          <Plus size={20} /> Add Memory
-        </button>
+        {currentMode === 'caregiver' && (
+          <button style={styles.addBtn} onClick={() => setShowAddModal(true)}>
+            <Plus size={20} /> Add Memory
+          </button>
+        )}
       </div>
 
       {/* Album grid */}
@@ -207,6 +227,37 @@ export default function Memories() {
                 <option value="happy">Happy Moments</option>
                 <option value="places">Special Places</option>
               </select>
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Upload Photo</label>
+              <input 
+                type="file" 
+                id="memory-photo-input"
+                accept="image/*"
+                onChange={handleImageChange}
+                style={{ display: 'none' }}
+              />
+              <label htmlFor="memory-photo-input" style={styles.uploadBox}>
+                <Upload size={20} color="var(--primary-green)" />
+                <span style={styles.uploadText}>
+                  {imageFile ? imageFile.name : "Click to select a photo from your device"}
+                </span>
+              </label>
+
+              {imagePreview && (
+                <div style={styles.previewContainer}>
+                  <img src={imagePreview} alt="Selected memory preview" style={styles.previewImg} />
+                  <button 
+                    type="button" 
+                    style={styles.removeImgBtn} 
+                    onClick={() => { setImageFile(null); setImagePreview(null); }}
+                    aria-label="Remove photo"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )}
             </div>
 
             <div style={styles.inputGroup}>
@@ -425,6 +476,54 @@ const styles = {
     fontWeight: '500',
     fontFamily: 'inherit',
     resize: 'none',
+  },
+  uploadBox: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    padding: '12px 16px',
+    borderRadius: '12px',
+    border: '1.5px dashed var(--border-color)',
+    backgroundColor: 'var(--sidebar-bg)',
+    cursor: 'pointer',
+    transition: 'border-color 0.2s ease',
+  },
+  uploadText: {
+    fontSize: '0.92rem',
+    color: 'var(--text-muted)',
+    fontWeight: '500',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  previewContainer: {
+    position: 'relative',
+    width: '100%',
+    height: '130px',
+    borderRadius: '12px',
+    overflow: 'hidden',
+    marginTop: '8px',
+    border: '1px solid var(--border-color)',
+  },
+  previewImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+  },
+  removeImgBtn: {
+    position: 'absolute',
+    top: '8px',
+    right: '8px',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '50%',
+    width: '28px',
+    height: '28px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
   },
   submitBtn: {
     backgroundColor: 'var(--primary-green)',

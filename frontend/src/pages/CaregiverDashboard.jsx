@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAppModeStore } from '../store/useAppModeStore';
 import {
   User,
   Activity,
@@ -22,8 +24,18 @@ import {
 } from 'lucide-react';
 
 export default function CaregiverDashboard() {
+  const navigate = useNavigate();
+  const setMode = useAppModeStore((state) => state.setMode);
+  const patientProfile = useAppModeStore((state) => state.patientProfile);
+  const caregiverProfile = useAppModeStore((state) => state.caregiverProfile);
+
   const [selectedTimeframe, setSelectedTimeframe] = useState('Month');
   const [selectedDay, setSelectedDay] = useState(30);
+
+  const handleSwitchToPatient = () => {
+    setMode('patient');
+    navigate('/patient/home');
+  };
 
   const daysList = [
     { day: 'Sun', num: 25 },
@@ -110,13 +122,23 @@ export default function CaregiverDashboard() {
       {/* ── Welcome Hero Banner ───────────────────────────────────── */}
       <section className="cg-hero-banner">
         <div className="cg-hero-content">
-          <h1 className="cg-hero-title">Good Morning, Asha Devi</h1>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 700, marginBottom: '10px' }}>
+            <span>👤 Monitoring Patient:</span>
+            <strong>{patientProfile.name || 'Meera Sharma'}</strong>
+            <span>({patientProfile.relation || 'Mother'})</span>
+          </div>
+          <h1 className="cg-hero-title">Good Morning, {caregiverProfile.fullName || 'Asha Devi'}</h1>
           <p className="cg-hero-subtitle">
-            Welcome to your patient monitoring overview. Everything looks stable today with continuous cognitive engagement and high medicine adherence.
+            Welcome to your patient monitoring dashboard. Cognitive activity, memory recall, and health routines for {patientProfile.name || 'Meera'} are active and on track today.
           </p>
-          <button className="cg-hero-btn">
-            <Plus size={18} /> Create Appointment / Log Routine
-          </button>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '12px' }}>
+            <button className="cg-hero-btn" onClick={handleSwitchToPatient} style={{ backgroundColor: '#ffffff', color: 'var(--primary-green)' }}>
+              <ArrowRight size={18} /> Switch to Patient View
+            </button>
+            <button className="cg-hero-btn">
+              <Plus size={18} /> Add Routine / Task
+            </button>
+          </div>
         </div>
 
         {/* Doctor / Caregiver Graphic Illustration */}

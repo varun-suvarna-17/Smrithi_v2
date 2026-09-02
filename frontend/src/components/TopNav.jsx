@@ -15,6 +15,9 @@ import {
 } from 'lucide-react';
 import { logout } from '../firebase/auth';
 import { useAuth } from '../firebase/useAuth';
+import { useAppModeStore } from '../store/useAppModeStore';
+import PinUnlockModal from './PinUnlockModal';
+import { ArrowRight, Lock } from 'lucide-react';
 
 /**
  * TopNav — desktop right-side utility bar, which morphs into a mobile-friendly top header.
@@ -24,12 +27,17 @@ import { useAuth } from '../firebase/useAuth';
 export default function TopNav({ onMenuClick }) {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [unreadCount, setUnreadCount] = useState(3);
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.matchMedia('(max-width: 480px)').matches : false
   );
   const navRef = useRef(null);
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const currentMode = useAppModeStore((state) => state.currentMode);
+  const setMode = useAppModeStore((state) => state.setMode);
+  const patientProfile = useAppModeStore((state) => state.patientProfile);
+  const caregiverProfile = useAppModeStore((state) => state.caregiverProfile);
 
   // Handle window resizing to detect mobile viewport width for bottom sheets
   useEffect(() => {
@@ -352,10 +360,12 @@ export default function TopNav({ onMenuClick }) {
                     </div>
                     <div>
                       <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)' }}>
-                        {currentUser?.displayName || 'Asha Devi'}
+                        {currentMode === 'caregiver'
+                          ? caregiverProfile.fullName || currentUser?.displayName || 'Asha Devi (Caregiver)'
+                          : patientProfile.name || 'Meera Sharma (Patient)'}
                       </div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {currentUser?.email || 'Senior Member'}
+                        {currentMode === 'caregiver' ? 'Caregiver Account' : `Patient • ${patientProfile.relation || 'Mother'}`}
                       </div>
                     </div>
                   </div>
@@ -366,23 +376,37 @@ export default function TopNav({ onMenuClick }) {
                     className="dropdown-item"
                     onClick={() => {
                       setActiveDropdown(null);
-                      navigate('/profile');
+                      navigate(currentMode === 'caregiver' ? '/caregiver/profile' : '/patient/profile');
                     }}
                   >
                     <User size={18} style={{ color: 'var(--primary-green)' }} />
                     <span>View Profile</span>
                   </button>
 
-                  <button
-                    className="dropdown-item"
-                    onClick={() => {
-                      setActiveDropdown(null);
-                      navigate('/caregiver');
-                    }}
-                  >
-                    <ShieldCheck size={18} style={{ color: 'var(--primary-green)' }} />
-                    <span>Caregiver Access</span>
-                  </button>
+                  {currentMode === 'caregiver' ? (
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        setActiveDropdown(null);
+                        setMode('patient');
+                        navigate('/patient/home');
+                      }}
+                    >
+                      <ArrowRight size={18} style={{ color: 'var(--primary-green)' }} />
+                      <span>Switch to Patient View</span>
+                    </button>
+                  ) : (
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        setActiveDropdown(null);
+                        setIsPinModalOpen(true);
+                      }}
+                    >
+                      <Lock size={18} style={{ color: 'var(--primary-green)' }} />
+                      <span>Caregiver Mode (PIN)</span>
+                    </button>
+                  )}
 
                   <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '6px 0' }} />
 
@@ -408,6 +432,13 @@ export default function TopNav({ onMenuClick }) {
           </button>
         </div>
       </header>
+
+      {/* PIN Unlock Modal */}
+      <PinUnlockModal
+        isOpen={isPinModalOpen}
+        onClose={() => setIsPinModalOpen(false)}
+        targetPath="/caregiver/dashboard"
+      />
     </>
   );
 }

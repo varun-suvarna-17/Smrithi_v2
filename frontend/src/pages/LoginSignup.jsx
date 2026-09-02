@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../firebase/useAuth';
-import { registerWithEmail, loginWithEmail, logout } from '../firebase/auth';
+import { registerWithEmail, loginWithEmail } from '../firebase/auth';
 import { AlertCircle, Eye, EyeOff, Loader, CheckCircle2 } from 'lucide-react';
 import '../styles/LoginSignup.css';
+
+import { useAppModeStore } from '../store/useAppModeStore';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
@@ -11,6 +13,8 @@ export default function LoginSignup() {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentUser, authLoading } = useAuth();
+  const setCaregiverProfile = useAppModeStore((state) => state.setCaregiverProfile);
+  const setMode = useAppModeStore((state) => state.setMode);
   
   const [activeTab, setActiveTab] = useState(() => {
     return location.pathname === '/signup' ? 'signup' : 'login';
@@ -24,25 +28,14 @@ export default function LoginSignup() {
   const [loginErrors, setLoginErrors] = useState({});
   const [showLoginPassword, setShowLoginPassword] = useState(false);
 
-  // Signup form state
+  // Signup form state (Caregiver Account)
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState('patient');
-  const [phone, setPhone] = useState('');
   const [signupErrors, setSignupErrors] = useState({});
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Synchronize activeTab with URL pathname
-  useEffect(() => {
-    if (location.pathname === '/signup') {
-      setActiveTab('signup');
-    } else if (location.pathname === '/login') {
-      setActiveTab('login');
-    }
-  }, [location.pathname]);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -94,6 +87,9 @@ export default function LoginSignup() {
   // Signup validation
   const validateSignup = () => {
     const errors = {};
+    if (!fullName.trim()) {
+      errors.fullName = 'Full name is required.';
+    }
     if (!signupEmail.trim()) {
       errors.email = 'Email is required.';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupEmail)) {
@@ -108,14 +104,6 @@ export default function LoginSignup() {
       errors.confirmPassword = 'Please confirm your password.';
     } else if (confirmPassword !== signupPassword) {
       errors.confirmPassword = 'Passwords do not match.';
-    }
-    if (!fullName.trim()) {
-      errors.fullName = 'Full name is required.';
-    }
-    if (role === 'caregiver' && !phone.trim()) {
-      errors.phone = 'Phone is required for caregivers.';
-    } else if (phone && !/^\d{10}$/.test(phone.replace(/\D/g, ''))) {
-      errors.phone = 'Please enter a valid 10-digit phone number.';
     }
     return errors;
   };
@@ -133,7 +121,8 @@ export default function LoginSignup() {
     setIsLoading(true);
     try {
       await loginWithEmail(loginEmail, loginPassword);
-      navigate('/home');
+      setMode('caregiver');
+      navigate('/caregiver/dashboard');
     } catch (error) {
       setLoginErrors({
         submit: getFirebaseErrorMessage(error.code),
@@ -155,56 +144,37 @@ export default function LoginSignup() {
 
     setIsLoading(true);
     try {
-      // 1. Create Firebase user
+      // 1. Create Firebase caregiver user
       const userCredential = await registerWithEmail(signupEmail, signupPassword);
       const userId = userCredential.user.uid;
 
-      // 2. Create backend record (patient or caregiver)
-      const backendData =
-        role === 'patient'
-          ? {
-              name: fullName,
-              age: 65,
-              gender: 'Other',
-              dementia_stage: 'Early Stage',
-              preferred_language: 'en',
-              caregiver_id: null,
-            }
-          : {
-              name: fullName,
-              relationship: 'Primary Caregiver',
-              phone: phone.replace(/\D/g, ''),
-              email: signupEmail,
-              user_id: userId,
-            };
-
-      const endpoint =
-        role === 'patient' ? `${API_BASE_URL}/api/patients/` : `${API_BASE_URL}/api/caregivers/`;
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(backendData),
+      // 2. Update Zustand store
+      setCaregiverProfile({
+        fullName,
+        email: signupEmail,
       });
+      setMode('caregiver');
 
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.detail || 'Failed to create profile on backend');
+      // 3. Create Caregiver Profile in backend (non-blocking)
+      try {
+        await fetch(`${API_BASE_URL}/api/caregiver/profile`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            caregiver_id: userId,
+            full_name: fullName,
+            email: signupEmail,
+            phone: '',
+          }),
+        });
+      } catch (backendErr) {
+        console.warn('Backend caregiver profile sync skipped:', backendErr);
       }
 
-      // 3. Clear auth session so user is redirected to LOGIN page to authenticate
-      await logout();
-
-      // 4. Set success state & prefill login email
-      setSuccessMessage('Account created successfully! Please log in with your credentials.');
-      setLoginEmail(signupEmail);
-      setLoginPassword('');
-      setSignupErrors({});
-
-      // 5. Redirect to LOGIN page
-      setActiveTab('login');
-      navigate('/login');
+      // 4. Direct newly registered caregiver to setup their patient's profile
+      navigate('/caregiver/setup-patient');
     } catch (error) {
       const errorMessage = error.code
         ? getFirebaseErrorMessage(error.code)
@@ -362,29 +332,6 @@ export default function LoginSignup() {
             )}
 
             <div className="form-group">
-              <label>I am a...</label>
-              <div className="role-selector">
-                <button
-                  type="button"
-                  className={`role-button ${role === 'patient' ? 'active' : ''}`}
-                  onClick={() => {
-                    setRole('patient');
-                    setPhone('');
-                  }}
-                >
-                  👤 Patient
-                </button>
-                <button
-                  type="button"
-                  className={`role-button ${role === 'caregiver' ? 'active' : ''}`}
-                  onClick={() => setRole('caregiver')}
-                >
-                  👥 Caregiver
-                </button>
-              </div>
-            </div>
-
-            <div className="form-group">
               <label htmlFor="signup-fullname">Full Name</label>
               <input
                 id="signup-fullname"
@@ -482,27 +429,6 @@ export default function LoginSignup() {
               )}
             </div>
 
-            {role === 'caregiver' && (
-              <div className="form-group">
-                <label htmlFor="signup-phone">Phone Number</label>
-                <input
-                  id="signup-phone"
-                  type="tel"
-                  placeholder="10-digit phone number"
-                  value={phone}
-                  onChange={(e) => {
-                    setPhone(e.target.value);
-                    if (signupErrors.phone) {
-                      setSignupErrors({ ...signupErrors, phone: '' });
-                    }
-                  }}
-                  className={`form-input ${signupErrors.phone ? 'error' : ''}`}
-                  disabled={isLoading}
-                />
-                {signupErrors.phone && <p className="error-text">{signupErrors.phone}</p>}
-              </div>
-            )}
-
             <button
               type="submit"
               className="submit-button"
@@ -511,7 +437,7 @@ export default function LoginSignup() {
               {isLoading ? (
                 <>
                   <Loader size={18} className="spinner" />
-                  Signing up...
+                  Creating account...
                 </>
               ) : (
                 <>

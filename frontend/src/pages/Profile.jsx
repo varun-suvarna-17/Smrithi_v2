@@ -11,33 +11,42 @@ import {
   X,
   User,
   Shield,
-  Sparkles
+  Sparkles,
+  Lock,
+  Heart
 } from 'lucide-react';
 import { logout } from '../firebase/auth';
 import { useAuth } from '../firebase/useAuth';
+import { useAppModeStore } from '../store/useAppModeStore';
 
 /**
  * Profile Page — SMRITHI Senior Wellness App
- * Visual Identity: Sage-green (#4F8A68, #5B8C7A) and warm ivory (#FAF8F3)
- * Minimum 16px typography throughout for senior accessibility.
+ * Dynamically displays Patient Profile in 'patient' mode (read-only)
+ * or Caregiver Profile in 'caregiver' mode (with edit & PIN controls).
  */
 export default function Profile() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
-
-  // Profile static sample data (with fallback to auth)
-  const [profileData, setProfileData] = useState({
-    fullName: 'Meera Sharma',
-    role: 'Patient',
-    email: currentUser?.email || 'meera.sharma@example.com',
-    phone: '+91 98765 43210',
-    language: 'English & Hindi',
-    caregiverName: 'Priya Sharma (Daughter)',
-    avatarUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300&h=300',
-  });
+  
+  const currentMode = useAppModeStore((state) => state.currentMode);
+  const patientProfile = useAppModeStore((state) => state.patientProfile);
+  const caregiverProfile = useAppModeStore((state) => state.caregiverProfile);
+  const caregiverPin = useAppModeStore((state) => state.caregiverPin);
+  const setPatientProfile = useAppModeStore((state) => state.setPatientProfile);
+  const setCaregiverProfile = useAppModeStore((state) => state.setCaregiverProfile);
+  const setCaregiverPin = useAppModeStore((state) => state.setCaregiverPin);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editFormData, setEditFormData] = useState({ ...profileData });
+  const [editFormData, setEditFormData] = useState({
+    caregiverName: caregiverProfile.fullName || 'Asha Devi',
+    email: caregiverProfile.email || currentUser?.email || 'caregiver@smrithi.org',
+    phone: caregiverProfile.phone || '+91 98765 43210',
+    patientName: patientProfile.name || 'Meera Sharma',
+    patientRelation: patientProfile.relation || 'Mother',
+    patientAge: patientProfile.age || 72,
+    patientLanguage: patientProfile.language || 'English & Hindi',
+    pin: caregiverPin || '1234',
+  });
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   const handleLogout = async () => {
@@ -50,18 +59,42 @@ export default function Profile() {
   };
 
   const handleOpenEdit = () => {
-    setEditFormData({ ...profileData });
+    setEditFormData({
+      caregiverName: caregiverProfile.fullName || 'Asha Devi',
+      email: caregiverProfile.email || currentUser?.email || 'caregiver@smrithi.org',
+      phone: caregiverProfile.phone || '+91 98765 43210',
+      patientName: patientProfile.name || 'Meera Sharma',
+      patientRelation: patientProfile.relation || 'Mother',
+      patientAge: patientProfile.age || 72,
+      patientLanguage: patientProfile.language || 'English & Hindi',
+      pin: caregiverPin || '1234',
+    });
     setIsEditing(true);
     setSavedSuccess(false);
   };
 
   const handleSaveEdit = (e) => {
     e.preventDefault();
-    setProfileData({ ...editFormData });
+    setCaregiverProfile({
+      fullName: editFormData.caregiverName,
+      email: editFormData.email,
+      phone: editFormData.phone,
+    });
+    setPatientProfile({
+      name: editFormData.patientName,
+      relation: editFormData.patientRelation,
+      age: Number(editFormData.patientAge) || 72,
+      language: editFormData.patientLanguage,
+    });
+    if (editFormData.pin) {
+      setCaregiverPin(editFormData.pin.trim());
+    }
     setIsEditing(false);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3500);
   };
+
+  const isCaregiver = currentMode === 'caregiver';
 
   return (
     <div style={styles.pageContainer}>
@@ -71,7 +104,7 @@ export default function Profile() {
         {savedSuccess && (
           <div style={styles.successBanner} role="alert">
             <Check size={20} color="#26733E" strokeWidth={2.5} />
-            <span>Profile information updated successfully</span>
+            <span>Profile settings updated successfully</span>
           </div>
         )}
 
@@ -79,96 +112,148 @@ export default function Profile() {
         <section style={styles.headerSection}>
           <div style={styles.photoContainer}>
             <img
-              src={profileData.avatarUrl}
-              alt={profileData.fullName}
+              src={
+                isCaregiver
+                  ? 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=300&h=300'
+                  : patientProfile.photoUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=300&h=300'
+              }
+              alt={isCaregiver ? caregiverProfile.fullName : patientProfile.name}
               style={styles.avatarImg}
             />
           </div>
 
-          <h1 style={styles.userName}>{profileData.fullName}</h1>
+          <h1 style={styles.userName}>
+            {isCaregiver ? caregiverProfile.fullName || 'Asha Devi' : patientProfile.name || 'Meera Sharma'}
+          </h1>
 
           {/* Role Pill Badge */}
           <div style={styles.rolePill} aria-label="Account Role">
             <span style={styles.roleDot} />
-            <span>{profileData.role}</span>
+            <span>{isCaregiver ? 'Caregiver Account' : `Senior Member (${patientProfile.relation || 'Patient'})`}</span>
           </div>
         </section>
 
         {/* ── INFO SECTION (Warm Ivory Card) ── */}
         <section style={styles.infoCard} className="profile-card-padding" aria-label="Personal Information">
-          {/* Row 1: Email */}
-          <div style={styles.infoRow}>
-            <div style={styles.iconBox} aria-hidden="true">
-              <Mail size={22} color="#4F8A68" strokeWidth={2.2} />
-            </div>
-            <div style={styles.infoTextGroup}>
-              <span style={styles.fieldLabel}>Email Address</span>
-              <span style={styles.fieldValue}>{profileData.email}</span>
-            </div>
-          </div>
-
-          <div style={styles.rowDivider} />
-
-          {/* Row 2: Phone */}
-          <div style={styles.infoRow}>
-            <div style={styles.iconBox} aria-hidden="true">
-              <Phone size={22} color="#4F8A68" strokeWidth={2.2} />
-            </div>
-            <div style={styles.infoTextGroup}>
-              <span style={styles.fieldLabel}>Phone Number</span>
-              <span style={styles.fieldValue}>{profileData.phone}</span>
-            </div>
-          </div>
-
-          <div style={styles.rowDivider} />
-
-          {/* Row 3: Preferred Language */}
-          <div style={styles.infoRow}>
-            <div style={styles.iconBox} aria-hidden="true">
-              <Globe size={22} color="#4F8A68" strokeWidth={2.2} />
-            </div>
-            <div style={styles.infoTextGroup}>
-              <span style={styles.fieldLabel}>Preferred Language</span>
-              <span style={styles.fieldValue}>{profileData.language}</span>
-            </div>
-          </div>
-
-          <div style={styles.rowDivider} />
-
-          {/* Row 4: Linked Caregiver */}
-          <div style={styles.infoRow}>
-            <div style={styles.iconBox} aria-hidden="true">
-              <HeartHandshake size={22} color="#4F8A68" strokeWidth={2.2} />
-            </div>
-            <div style={styles.infoTextGroup}>
-              <span style={styles.fieldLabel}>Linked Caregiver</span>
-              <div style={styles.caregiverValueRow}>
-                <span style={styles.fieldValue}>{profileData.caregiverName}</span>
-                {/* Connected indicator badge */}
-                <div style={styles.connectedBadge}>
-                  <span style={styles.connectedDot} />
-                  <span>Connected</span>
+          {isCaregiver ? (
+            <>
+              {/* Caregiver Info */}
+              <div style={styles.infoRow}>
+                <div style={styles.iconBox} aria-hidden="true">
+                  <Mail size={22} color="#4F8A68" strokeWidth={2.2} />
+                </div>
+                <div style={styles.infoTextGroup}>
+                  <span style={styles.fieldLabel}>Email Address</span>
+                  <span style={styles.fieldValue}>{caregiverProfile.email || currentUser?.email || 'caregiver@smrithi.org'}</span>
                 </div>
               </div>
-            </div>
-          </div>
+
+              <div style={styles.rowDivider} />
+
+              <div style={styles.infoRow}>
+                <div style={styles.iconBox} aria-hidden="true">
+                  <Phone size={22} color="#4F8A68" strokeWidth={2.2} />
+                </div>
+                <div style={styles.infoTextGroup}>
+                  <span style={styles.fieldLabel}>Phone Number</span>
+                  <span style={styles.fieldValue}>{caregiverProfile.phone || '+91 98765 43210'}</span>
+                </div>
+              </div>
+
+              <div style={styles.rowDivider} />
+
+              <div style={styles.infoRow}>
+                <div style={styles.iconBox} aria-hidden="true">
+                  <HeartHandshake size={22} color="#4F8A68" strokeWidth={2.2} />
+                </div>
+                <div style={styles.infoTextGroup}>
+                  <span style={styles.fieldLabel}>Linked Patient</span>
+                  <div style={styles.caregiverValueRow}>
+                    <span style={styles.fieldValue}>
+                      {patientProfile.name || 'Meera Sharma'} ({patientProfile.relation || 'Mother'}, {patientProfile.age || 72} yrs)
+                    </span>
+                    <div style={styles.connectedBadge}>
+                      <span style={styles.connectedDot} />
+                      <span>Active</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={styles.rowDivider} />
+
+              <div style={styles.infoRow}>
+                <div style={styles.iconBox} aria-hidden="true">
+                  <Lock size={22} color="#4F8A68" strokeWidth={2.2} />
+                </div>
+                <div style={styles.infoTextGroup}>
+                  <span style={styles.fieldLabel}>Caregiver Security PIN</span>
+                  <span style={styles.fieldValue}>•••• (PIN: {caregiverPin || '1234'})</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Patient Info (Senior-Safe, Read-Only) */}
+              <div style={styles.infoRow}>
+                <div style={styles.iconBox} aria-hidden="true">
+                  <Globe size={22} color="#4F8A68" strokeWidth={2.2} />
+                </div>
+                <div style={styles.infoTextGroup}>
+                  <span style={styles.fieldLabel}>Preferred Language</span>
+                  <span style={styles.fieldValue}>{patientProfile.language || 'English & Hindi'}</span>
+                </div>
+              </div>
+
+              <div style={styles.rowDivider} />
+
+              <div style={styles.infoRow}>
+                <div style={styles.iconBox} aria-hidden="true">
+                  <Heart size={22} color="#4F8A68" strokeWidth={2.2} />
+                </div>
+                <div style={styles.infoTextGroup}>
+                  <span style={styles.fieldLabel}>Age & Family</span>
+                  <span style={styles.fieldValue}>{patientProfile.age || 72} years old • {patientProfile.relation || 'Mother'}</span>
+                </div>
+              </div>
+
+              <div style={styles.rowDivider} />
+
+              <div style={styles.infoRow}>
+                <div style={styles.iconBox} aria-hidden="true">
+                  <HeartHandshake size={22} color="#4F8A68" strokeWidth={2.2} />
+                </div>
+                <div style={styles.infoTextGroup}>
+                  <span style={styles.fieldLabel}>Caring Support</span>
+                  <div style={styles.caregiverValueRow}>
+                    <span style={styles.fieldValue}>{caregiverProfile.fullName || 'Asha Devi'} (Primary Caregiver)</span>
+                    <div style={styles.connectedBadge}>
+                      <span style={styles.connectedDot} />
+                      <span>Connected</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </section>
 
         {/* ── ACTIONS SECTION ── */}
         <section style={styles.actionsSection}>
-          {/* Edit Profile Button (Sage-Green Outline Style) */}
-          <button
-            type="button"
-            className="profile-edit-btn"
-            onClick={handleOpenEdit}
-            style={styles.editBtn}
-            aria-label="Edit Profile Details"
-          >
-            <Edit3 size={20} color="#3B6F58" strokeWidth={2.2} />
-            <span>Edit Profile</span>
-          </button>
+          {isCaregiver && (
+            <button
+              type="button"
+              className="profile-edit-btn"
+              onClick={handleOpenEdit}
+              style={styles.editBtn}
+              aria-label="Edit Profile Details"
+            >
+              <Edit3 size={20} color="#3B6F58" strokeWidth={2.2} />
+              <span>Edit Profile & Patient Settings</span>
+            </button>
+          )}
 
-          {/* Log Out Button (Muted Coral Outline, positioned separately/lower) */}
+          {/* Log Out Button */}
           <div style={styles.logoutWrapper}>
             <button
               type="button"
@@ -183,8 +268,8 @@ export default function Profile() {
           </div>
         </section>
 
-        {/* ── EDIT PROFILE MODAL ── */}
-        {isEditing && (
+        {/* ── EDIT PROFILE MODAL (Caregiver Only) ── */}
+        {isEditing && isCaregiver && (
           <div style={styles.modalBackdrop} onClick={() => setIsEditing(false)}>
             <div
               style={styles.modalCard}
@@ -199,7 +284,7 @@ export default function Profile() {
                     <User size={22} color="#4F8A68" strokeWidth={2.2} />
                   </div>
                   <h2 id="edit-profile-title" style={styles.modalTitle}>
-                    Edit Profile
+                    Edit Profile & Settings
                   </h2>
                 </div>
                 <button
@@ -214,15 +299,15 @@ export default function Profile() {
 
               <form onSubmit={handleSaveEdit} style={styles.modalForm}>
                 <div style={styles.formGroup}>
-                  <label htmlFor="fullName" style={styles.formLabel}>
-                    Full Name
+                  <label htmlFor="caregiverName" style={styles.formLabel}>
+                    Caregiver Name
                   </label>
                   <input
-                    id="fullName"
+                    id="caregiverName"
                     type="text"
-                    value={editFormData.fullName}
+                    value={editFormData.caregiverName}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, fullName: e.target.value })
+                      setEditFormData({ ...editFormData, caregiverName: e.target.value })
                     }
                     style={styles.formInput}
                     required
@@ -262,15 +347,48 @@ export default function Profile() {
                 </div>
 
                 <div style={styles.formGroup}>
-                  <label htmlFor="language" style={styles.formLabel}>
-                    Preferred Language
+                  <label htmlFor="patientName" style={styles.formLabel}>
+                    Patient's Name
                   </label>
                   <input
-                    id="language"
+                    id="patientName"
                     type="text"
-                    value={editFormData.language}
+                    value={editFormData.patientName}
                     onChange={(e) =>
-                      setEditFormData({ ...editFormData, language: e.target.value })
+                      setEditFormData({ ...editFormData, patientName: e.target.value })
+                    }
+                    style={styles.formInput}
+                    required
+                  />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label htmlFor="patientRelation" style={styles.formLabel}>
+                    Patient Relationship
+                  </label>
+                  <input
+                    id="patientRelation"
+                    type="text"
+                    value={editFormData.patientRelation}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, patientRelation: e.target.value })
+                    }
+                    style={styles.formInput}
+                    required
+                  />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label htmlFor="pin" style={styles.formLabel}>
+                    Caregiver Mode Security PIN (4 Digits)
+                  </label>
+                  <input
+                    id="pin"
+                    type="text"
+                    maxLength={8}
+                    value={editFormData.pin}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, pin: e.target.value })
                     }
                     style={styles.formInput}
                     required
@@ -302,52 +420,49 @@ export default function Profile() {
 
 const styles = {
   pageContainer: {
-    width: '100%',
     display: 'flex',
     justifyContent: 'center',
-    padding: '8px 0 16px 0',
+    width: '100%',
+    padding: '24px 16px 80px',
   },
   contentWrapper: {
     width: '100%',
-    maxWidth: '640px',
+    maxWidth: '560px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px',
+    alignItems: 'center',
+    gap: '24px',
   },
   successBanner: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    backgroundColor: '#E5F4EB',
-    border: '1.5px solid #A6D4B7',
-    borderRadius: '16px',
-    padding: '14px 20px',
+    gap: '10px',
+    backgroundColor: '#E8F5E9',
     color: '#26733E',
-    fontSize: '16px',
+    padding: '14px 20px',
+    borderRadius: '16px',
+    width: '100%',
+    boxSizing: 'border-box',
+    fontSize: '0.98rem',
     fontWeight: '600',
-    boxShadow: '0 4px 16px rgba(38, 115, 62, 0.08)',
+    border: '1.5px solid #C8E6C9',
   },
-
-  /* ── Header Section ── */
   headerSection: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     textAlign: 'center',
-    padding: '12px 0 6px',
+    gap: '12px',
+    width: '100%',
   },
   photoContainer: {
-    width: '124px',
-    height: '124px',
+    width: '120px',
+    height: '120px',
     borderRadius: '50%',
-    border: '4px solid #5B8C7A',
     padding: '4px',
     backgroundColor: '#FAF8F3',
-    boxShadow: '0 8px 24px rgba(79, 138, 104, 0.15)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: '16px',
+    boxShadow: '0 8px 24px rgba(79, 138, 104, 0.18)',
+    border: '2px solid #5B8C7A',
   },
   avatarImg: {
     width: '100%',
@@ -356,25 +471,22 @@ const styles = {
     objectFit: 'cover',
   },
   userName: {
-    fontSize: '30px',
-    fontWeight: '700',
+    fontSize: '2rem',
+    fontWeight: '800',
     color: '#142418',
-    margin: 0,
+    margin: '4px 0 0',
     letterSpacing: '-0.02em',
-    lineHeight: 1.25,
   },
   rolePill: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '8px',
-    backgroundColor: '#E2EEE7',
-    color: '#386B52',
-    border: '1px solid #C4DCCF',
-    borderRadius: '9999px',
-    padding: '6px 18px',
-    fontSize: '16px',
-    fontWeight: '600',
-    marginTop: '10px',
+    backgroundColor: '#EAF3ED',
+    color: '#3B6F58',
+    padding: '6px 16px',
+    borderRadius: '50px',
+    fontSize: '0.92rem',
+    fontWeight: '700',
   },
   roleDot: {
     width: '8px',
@@ -382,133 +494,119 @@ const styles = {
     borderRadius: '50%',
     backgroundColor: '#4F8A68',
   },
-
-  /* ── Info Section Card (Warm Ivory) ── */
   infoCard: {
     backgroundColor: '#FAF8F3',
-    border: '1.5px solid #DFE7E2',
+    border: '1px solid #E8E4D8',
     borderRadius: '24px',
-    padding: '24px 28px',
-    boxShadow: '0 8px 28px rgba(40, 90, 60, 0.05)',
+    width: '100%',
+    padding: '24px',
+    boxSizing: 'border-box',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)',
     display: 'flex',
     flexDirection: 'column',
-    gap: '18px',
   },
   infoRow: {
     display: 'flex',
-    alignItems: 'flex-start',
-    gap: '18px',
-    padding: '4px 0',
+    alignItems: 'center',
+    gap: '16px',
+    padding: '12px 0',
+  },
+  rowDivider: {
+    height: '1px',
+    backgroundColor: '#EAE6DB',
+    width: '100%',
   },
   iconBox: {
-    width: '46px',
-    height: '46px',
-    borderRadius: '14px',
-    backgroundColor: '#EBF3EF',
-    border: '1px solid #D6E4DC',
+    width: '44px',
+    height: '44px',
+    borderRadius: '12px',
+    backgroundColor: '#EAF3ED',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    marginTop: '2px',
   },
   infoTextGroup: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '4px',
+    gap: '2px',
     flex: 1,
   },
   fieldLabel: {
-    fontSize: '16px',
-    fontWeight: '500',
-    color: '#526356',
-    letterSpacing: '0.01em',
+    fontSize: '0.88rem',
+    color: '#6E7C72',
+    fontWeight: '600',
   },
   fieldValue: {
-    fontSize: '18px',
-    fontWeight: '600',
+    fontSize: '1.05rem',
     color: '#142418',
-    lineHeight: 1.35,
-    wordBreak: 'break-word',
+    fontWeight: '700',
   },
   caregiverValueRow: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
-    gap: '10px',
-    marginTop: '2px',
+    gap: '8px',
   },
   connectedBadge: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: '6px',
-    backgroundColor: '#E5F4EB',
+    backgroundColor: '#EAF3ED',
     color: '#26733E',
-    border: '1px solid #A8DBB9',
-    borderRadius: '16px',
-    padding: '4px 12px',
-    fontSize: '16px',
-    fontWeight: '600',
+    padding: '4px 10px',
+    borderRadius: '50px',
+    fontSize: '0.8rem',
+    fontWeight: '700',
   },
   connectedDot: {
-    width: '8px',
-    height: '8px',
+    width: '6px',
+    height: '6px',
     borderRadius: '50%',
     backgroundColor: '#26733E',
   },
-  rowDivider: {
-    height: '1px',
-    backgroundColor: '#EAEFEA',
-    width: '100%',
-  },
-
-  /* ── Actions Section ── */
   actionsSection: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
-    marginTop: '4px',
+    gap: '16px',
+    width: '100%',
   },
   editBtn: {
-    width: '100%',
-    minHeight: '52px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '10px',
-    backgroundColor: '#FAF8F3',
-    color: '#366952',
+    backgroundColor: '#ffffff',
     border: '2px solid #5B8C7A',
-    borderRadius: '18px',
-    fontSize: '17px',
-    fontWeight: '600',
+    color: '#3B6F58',
+    padding: '14px',
+    borderRadius: '16px',
+    fontSize: '1.05rem',
+    fontWeight: '700',
     cursor: 'pointer',
-    boxShadow: '0 4px 16px rgba(91, 140, 122, 0.08)',
-    transition: 'all 0.2s ease',
+    width: '100%',
+    boxShadow: '0 2px 8px rgba(91, 140, 122, 0.08)',
   },
   logoutWrapper: {
-    marginTop: '14px',
+    display: 'flex',
+    justifyContent: 'center',
+    width: '100%',
   },
   logoutBtn: {
-    width: '100%',
-    minHeight: '52px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '10px',
-    backgroundColor: '#FAF8F3',
+    gap: '8px',
+    backgroundColor: 'transparent',
+    border: 'none',
     color: '#C24B42',
-    border: '2px solid #D96C63',
-    borderRadius: '18px',
-    fontSize: '17px',
-    fontWeight: '600',
+    padding: '12px 24px',
+    borderRadius: '12px',
+    fontSize: '0.98rem',
+    fontWeight: '700',
     cursor: 'pointer',
-    boxShadow: '0 4px 16px rgba(217, 108, 99, 0.06)',
-    transition: 'all 0.2s ease',
   },
-
-  /* ── Modal Dialog ── */
   modalBackdrop: {
     position: 'fixed',
     top: 0,
@@ -516,23 +614,20 @@ const styles = {
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(20, 36, 24, 0.45)',
+    backdropFilter: 'blur(5px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 9999,
     padding: '16px',
-    zIndex: 1300,
   },
   modalCard: {
-    backgroundColor: '#FAF8F3',
-    border: '1.5px solid #DFE7E2',
+    backgroundColor: '#ffffff',
     borderRadius: '24px',
-    padding: '28px',
+    maxWidth: '500px',
     width: '100%',
-    maxWidth: '520px',
-    boxShadow: '0 16px 40px rgba(20, 36, 24, 0.2)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
+    padding: '32px',
+    boxShadow: '0 24px 48px rgba(0,0,0,0.18)',
     maxHeight: '90vh',
     overflowY: 'auto',
   },
@@ -540,22 +635,19 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: '20px',
   },
   modalTitle: {
-    fontSize: '22px',
-    fontWeight: '700',
+    fontSize: '1.35rem',
+    fontWeight: '800',
     color: '#142418',
     margin: 0,
   },
   modalCloseBtn: {
-    background: 'none',
+    backgroundColor: 'transparent',
     border: 'none',
-    padding: '6px',
-    borderRadius: '8px',
     cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: '4px',
   },
   modalForm: {
     display: 'flex',
@@ -568,50 +660,44 @@ const styles = {
     gap: '6px',
   },
   formLabel: {
-    fontSize: '16px',
-    fontWeight: '600',
+    fontSize: '0.9rem',
+    fontWeight: '700',
     color: '#142418',
   },
   formInput: {
-    fontSize: '16px',
-    fontWeight: '500',
-    color: '#142418',
-    backgroundColor: '#FFFFFF',
-    border: '1.5px solid #CBDCD2',
-    borderRadius: '12px',
     padding: '12px 16px',
+    borderRadius: '12px',
+    border: '1.5px solid #d2ebd4',
+    fontSize: '0.98rem',
     outline: 'none',
-    transition: 'border-color 0.2s ease',
   },
   modalActions: {
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
     gap: '12px',
     marginTop: '12px',
   },
   cancelBtn: {
+    flex: 1,
+    padding: '12px',
+    borderRadius: '12px',
+    border: '1.5px solid #d2ebd4',
     backgroundColor: 'transparent',
-    color: '#526356',
-    border: '1.5px solid #CBDCD2',
-    borderRadius: '14px',
-    padding: '12px 20px',
-    fontSize: '16px',
-    fontWeight: '600',
+    color: '#6E7C72',
+    fontWeight: '700',
     cursor: 'pointer',
   },
   saveBtn: {
-    backgroundColor: '#4F8A68',
-    color: '#FFFFFF',
-    border: 'none',
-    borderRadius: '14px',
-    padding: '12px 22px',
-    fontSize: '16px',
-    fontWeight: '600',
-    display: 'inline-flex',
+    flex: 2,
+    display: 'flex',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: '8px',
+    padding: '12px',
+    borderRadius: '12px',
+    border: 'none',
+    backgroundColor: '#4F8A68',
+    color: '#ffffff',
+    fontWeight: '700',
     cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(79, 138, 104, 0.25)',
   },
 };

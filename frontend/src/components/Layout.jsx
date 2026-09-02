@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopNav from './TopNav';
 import Footer from './Footer';
@@ -21,6 +22,13 @@ import MobileDrawer from './MobileDrawer';
  */
 export default function Layout({ children }) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const location = useLocation();
+
+  // Exclude footer on Patient and Caregiver views
+  const hideFooterRoutes = ['/home', '/games', '/memories', '/profile', '/patient', '/caregiver'];
+  const shouldHideFooter = hideFooterRoutes.some(
+    (path) => location.pathname === path || location.pathname.startsWith(`${path}/`)
+  );
 
   return (
     <div className="app-container">
@@ -39,8 +47,8 @@ export default function Layout({ children }) {
           {children}
         </main>
 
-        {/* Footer */}
-        <Footer />
+        {/* Footer — rendered on other pages, excluded on specified patient routes */}
+        {!shouldHideFooter && <Footer />}
       </div>
 
       {/* ── Bottom nav: mobile only (hidden on desktop via CSS) ─────── */}

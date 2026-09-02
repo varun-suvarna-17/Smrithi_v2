@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Gamepad2, Mic, CheckCircle2, Clock, Music, Flower2, Heart, PlusCircle, X } from 'lucide-react';
+import { Gamepad2, CheckCircle2, Clock, Music, Flower2, Heart, PlusCircle, X } from 'lucide-react';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -8,8 +8,6 @@ export default function Home() {
   const [medicineTaken, setMedicineTaken] = useState(false);
   const [hydrationGlasses, setHydrationGlasses] = useState(6); // 6 out of 8 (2 left)
   const [activeLightbox, setActiveLightbox] = useState(null);
-  const [showTalkModal, setShowTalkModal] = useState(false);
-  const [talkTranscript, setTalkTranscript] = useState("Hi Asha, how are you feeling today? I am here to listen.");
 
   const memoriesList = [
     {
@@ -40,8 +38,7 @@ export default function Home() {
 
   const handleSuggestionAction = (type) => {
     if (type === 'music') {
-      setTalkTranscript("I can play a gentle mix of your favorite classics. Let’s slow down and enjoy the melody together.");
-      setShowTalkModal(true);
+      navigate('/activities');
       return;
     }
 
@@ -50,8 +47,7 @@ export default function Home() {
       return;
     }
 
-    setTalkTranscript("Let’s take five slow breaths together. Inhale for four, exhale for six, and let your shoulders soften.");
-    setShowTalkModal(true);
+    navigate('/activities');
   };
 
   const handleMarkMedicine = () => {
@@ -142,20 +138,13 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Main Big Callout Cards */}
+      {/* Main Big Callout Card */}
       <div style={styles.calloutGrid} className="home-callout-grid">
         <div style={{ ...styles.calloutCard, ...styles.calloutDark }} onClick={() => navigate('/games')}>
           <div style={styles.calloutIconCircle}>
             <Gamepad2 size={30} color="var(--primary-green)" />
           </div>
           <span style={styles.calloutText}>Play & Remember</span>
-        </div>
-
-        <div style={{ ...styles.calloutCard, ...styles.calloutLight }} onClick={() => setShowTalkModal(true)}>
-          <div style={styles.calloutIconCircle}>
-            <Mic size={30} color="var(--primary-green)" />
-          </div>
-          <span style={styles.calloutText}>Talk to Me</span>
         </div>
       </div>
 
@@ -301,43 +290,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Talk to Me Voice Assistant Modal */}
-      {showTalkModal && (
-        <div style={styles.overlay} onClick={() => setShowTalkModal(false)}>
-          <div style={styles.talkModal} onClick={e => e.stopPropagation()}>
-            <div style={styles.talkHeader}>
-              <div style={styles.talkTitleRow}>
-                <Mic size={24} color="var(--primary-green)" />
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '700' }}>Talk with SMRITHI</h3>
-              </div>
-              <button style={styles.closeBtn} onClick={() => setShowTalkModal(false)}>
-                <X size={24} />
-              </button>
-            </div>
-            
-            <div style={styles.talkWaveform}>
-              <div style={styles.waveBar}></div>
-              <div style={{...styles.waveBar, height: '45px', animationDelay: '0.1s'}}></div>
-              <div style={{...styles.waveBar, height: '60px', animationDelay: '0.2s'}}></div>
-              <div style={{...styles.waveBar, height: '30px', animationDelay: '0.3s'}}></div>
-              <div style={{...styles.waveBar, height: '50px', animationDelay: '0.4s'}}></div>
-            </div>
-
-            <div style={styles.talkBubble}>
-              {talkTranscript}
-            </div>
-
-            <div style={styles.talkInputRow}>
-              <button 
-                style={styles.btnPrimary} 
-                onClick={() => setTalkTranscript("I recorded your story about the garden! That's wonderful.")}
-              >
-                Tap to Speak / Reply
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -487,11 +439,6 @@ const styles = {
   calloutDark: {
     backgroundColor: 'var(--primary-green)',
     color: 'white',
-  },
-  calloutLight: {
-    backgroundColor: 'var(--secondary-green)',
-    color: 'var(--primary-green)',
-    border: '1px solid var(--border-color)',
   },
   calloutIconCircle: {
     width: '56px',
@@ -700,64 +647,5 @@ const styles = {
     right: '20px',
     color: 'var(--text-muted)',
     padding: '4px',
-  },
-  talkModal: {
-    backgroundColor: 'white',
-    borderRadius: '24px',
-    padding: '28px',
-    maxWidth: '440px',
-    width: '90%',
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px',
-  },
-  talkHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  talkTitleRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-  },
-  talkWaveform: {
-    height: '80px',
-    backgroundColor: 'var(--sidebar-bg)',
-    borderRadius: '16px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-  },
-  waveBar: {
-    width: '6px',
-    height: '20px',
-    borderRadius: '3px',
-    backgroundColor: 'var(--primary-green)',
-    animation: 'wave 1.2s infinite ease-in-out',
-  },
-  talkBubble: {
-    backgroundColor: 'var(--secondary-green)',
-    padding: '16px',
-    borderRadius: '18px 18px 18px 4px',
-    color: 'var(--primary-green)',
-    fontSize: '1.05rem',
-    fontWeight: '600',
-    lineHeight: '1.45',
-  },
-  talkInputRow: {
-    display: 'flex',
-    justifyContent: 'center',
-  },
-  btnPrimary: {
-    backgroundColor: 'var(--primary-green)',
-    color: 'white',
-    border: 'none',
-    borderRadius: '50px',
-    padding: '14px 28px',
-    fontWeight: '700',
-    fontSize: '1.05rem',
   }
 };

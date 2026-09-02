@@ -550,7 +550,6 @@ const styles = {
   },
   heroSection: {
     background: 'linear-gradient(180deg, var(--bg-color) 0%, var(--sidebar-bg) 100%)',
-    minHeight: 'calc(100vh - 78px)',
     minHeight: 'calc(100dvh - 78px)',
     display: 'flex',
     alignItems: 'center',
